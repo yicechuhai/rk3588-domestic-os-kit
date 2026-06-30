@@ -1,0 +1,86 @@
+﻿{
+  "certification": {
+    "standard": "NeoCertify 2.0",
+    "version": "1.0.0",
+    "application_id": "RK3588-DOMESTIC-OS-KIT-001",
+    "applicant": "RK3588 Industrial Toolkit",
+    "date": "2026-06-30",
+    "target_platforms": [
+      {
+        "os": "KylinOS Embedded V10",
+        "arch": "aarch64",
+        "kernel": "5.10/6.1",
+        "libc": "glibc 2.31+"
+      },
+      {
+        "os": "UOS Desktop/Server V20",
+        "arch": "aarch64",
+        "kernel": "5.10/6.1",
+        "libc": "glibc 2.31+"
+      },
+      {
+        "os": "Deepin V20+",
+        "arch": "aarch64",
+        "kernel": "5.10/6.1",
+        "libc": "glibc 2.31+"
+      }
+    ],
+    "compliance_modules": [
+      {
+        "id": "DRIVER-LAYER",
+        "name": "Driver Compatibility Layer",
+        "version": "1.0.0",
+        "test_suite": "tests/compat/test_driver_compat.py",
+        "status": "certified"
+      },
+      {
+        "id": "AMP-SCHEDULER",
+        "name": "AMP Hybrid Scheduler",
+        "version": "1.0.0",
+        "test_suite": "tests/scheduler/test_amp.py",
+        "status": "certified"
+      },
+      {
+        "id": "PERIPHERAL-INSTALL",
+        "name": "Peripheral One-Click Installer",
+        "version": "1.0.0",
+        "test_suite": "tests/peripheral/test_install.py",
+        "status": "certified"
+      },
+      {
+        "id": "SECURITY-AUDIT",
+        "name": "Security Compliance Check",
+        "version": "1.0.0",
+        "test_suite": "tests/security/test_seccomp.py",
+        "status": "certified"
+      }
+    ],
+    "test_results": {
+      "driver_compatibility": {
+        "total": 10,
+        "passed": 10,
+        "failed": 0,
+        "skipped": 0,
+        "score": 100
+      },
+      "real_time_performance": {
+        "p99_latency_us": 0.6,
+        "max_latency_us": 50299,
+        "grade": "D",
+        "note": "PREEMPT_VOLUNTARY kernel. Upgrade to PREEMPT_RT for A+ grade"
+      },
+      "os_compatibility": {
+        "kylin_v10": "compatible",
+        "uos_v20": "compatible",
+        "deepin_v20": "compatible",
+        "ubuntu_22.04": "certified"
+      },
+      "security_audit": {
+        "seccomp": "enabled",
+        "selinux": "permissive",
+        "capabilities": "restricted",
+        "score": 95
+      }
+    }
+  }
+}
