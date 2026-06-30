@@ -1,0 +1,242 @@
+﻿# =============================================================================
+# RK3588 CPU Core Partition Configuration Template
+# =============================================================================
+# 用于 AMP (Asymmetric Multi-Processing) 混合调度架构
+# Linux (A55) + RTOS (A76) 核分区配置
+# =============================================================================
+
+version: "2.0"
+chip: "RK3588"
+description: "CPU core partition for hybrid Linux + RTOS scheduling"
+
+# ── 全局 CPU 信息 ──
+cpu_topology:
+  total_cores: 8
+  clusters:
+    - name: "little_cluster"
+      type: "Cortex-A55"
+      cores: [0, 1, 2, 3]
+      freq_max_mhz: 1800
+      freq_min_mhz: 408
+      l2_cache: "512KB (shared)"
+      purpose: "Linux SMP - management and non-critical tasks"
+      
+    - name: "big_cluster"
+      type: "Cortex-A76"
+      cores: [4, 5, 6, 7]
+      freq_max_mhz: 2400
+      freq_min_mhz: 408
+      l2_cache: "512KB per core"
+      l3_cache: "3MB (shared DSU)"
+      purpose: "RTOS / bare-metal - real-time control tasks"
+
+# ── AMP 分区配置 ──
+amp:
+  # Linux 管理集群
+  linux_partition:
+    cores: "0-3"
+    cluster: "little_cluster"
+    kernel_cmdline:
+      - "isolcpus=4-7"           # 隔离 RTOS 核心
+      - "nohz_full=4-7"          # 禁用 RTOS 核心的 tick
+      - "rcu_nocbs=4-7"          # RCU 回调在管理核心处理
+      - "irqaffinity=0-3"        # IRQ 亲和性绑定到管理核心
+      - "nohz=on"                # 动态 tick
+    
+    governor:
+      default: "ondemand"
+      rt_boost: "performance"
+    
+    cpu_idle:
+      mode: "menu"               # Linux 管理核心使用 menu 调度器
+      states: [1, 2, 3]          # 允许的 idle 状态
+    
+    memory:
+      linux_mem: "2G"            # Linux 可用内存
+      linux_mem_addr: "0x00000000"
+    
+    devices:
+      assigned:                  # 分配给 Linux 的外设
+        - "eth0"
+        - "sdhci"
+        - "usb_host"
+        - "pcie"
+        - "gpu"
+        - "display"
+
+  # RTOS 实时集群
+  rtos_partition:
+    cores: "4-7"
+    cluster: "big_cluster"
+    type: "rtos"                 # rtos | bare_metal
+    
+    governor:
+      default: "performance"
+      freq_lock: true            # 锁定最高频率
+      max_freq_mhz: 2400
+    
+    cpu_idle:
+      disabled: true             # RTOS 核心禁止 idle
+      states: []                 # 不允许进入 idle 状态
+    
+    memory:
+      rtos_mem: "1G"             # RTOS 可用内存
+      rtos_mem_addr: "0x80000000"
+      cma_reserve: "256M"        # CMA 保留内存 (用于 IPC)
+    
+    # RTOS 镜像配置
+    rtos_image:
+      path: "/opt/rtos/zephyr_rk3588.bin"
+      entry_point: "0x10000000"
+      # 支持的 RTOS 类型
+      supported_rtos:
+        - name: "Zephyr"
+          image: "zephyr_rk3588.bin"
+          config: "west build -b rk3588_amp"
+        - name: "FreeRTOS"
+          image: "freertos_rk3588.bin"
+          config: "make TARGET=rk3588"
+        - name: "ThreadX"
+          image: "threadx_rk3588.bin"
+        - name: "bare_metal"
+          image: "baremetal_rk3588.bin"
+          note: "独立裸机程序，无 RTOS 内核"
+    
+    # 分配给 RTOS 的外设（独占访问）
+    devices:
+      assigned:
+        - "uart4"                # 工业控制串口
+        - "can0"                 # CAN FD 通道 0
+        - "can1"                 # CAN FD 通道 1
+        - "gpio3"                # 专用 GPIO bank
+        - "pwm0"                 # PWM 输出
+        - "pwm1"                 # PWM 输出
+        - "adc0"                 # ADC 采集
+        - "timer0"               # 高精度定时器
+
+# ── IPC 核间通信配置 ──
+ipc:
+  type: "rpmsg"                  # rpmsg | mailbox | shared_memory
+  rpmsg:
+    channels: 4
+    names:
+      - "rpmsg-amp-ch0"          # 系统控制通道
+      - "rpmsg-amp-ch1"          # 传感器数据流
+      - "rpmsg-amp-ch2"          # 电机控制指令
+      - "rpmsg-amp-ch3"          # 调试/遥测
+    
+    buffer_size: 512             # 每消息最大字节数
+    vring_size: 256              # virtqueue ring 大小
+    
+    # 通道优先级 (RT 优先级)
+    channel_priorities:
+      "rpmsg-amp-ch0": 99         # 系统控制最高优先级
+      "rpmsg-amp-ch1": 80         # 传感器数据
+      "rpmsg-amp-ch2": 90         # 电机控制
+      "rpmsg-amp-ch3": 50         # 调试/遥测
+  
+  shared_memory:
+    address: "0x10000000"
+    size: "0x1000000"             # 16MB
+    protocol: "ring_buffer"      # ring_buffer | message_queue
+  
+  # Mailbox 硬件支持
+  mailbox:
+    enabled: false               # RK3588 有硬件 Mailbox，可选启用
+    channels: 2
+    interrupts: [144, 145]
+
+# ── 实时性能约束 ──
+realtime_constraints:
+  scheduling:
+    policy: "SCHED_FIFO"         # RTOS 使用 FIFO 调度
+    max_latency_us: 50           # 最大中断延迟 (目标)
+    max_jitter_us: 10            # 最大周期抖动 (目标)
+    cycle_time_us: 100           # 控制周期 (典型)
+  
+  interrupt_latency:
+    target_us: 20                # 目标中断响应延迟
+    worst_case_us: 50            # 最坏情况中断延迟
+    measurement: "timer_irq"     # 使用定时器中断测量
+  
+  memory_protection:
+    mpu_enabled: true            # RTOS 侧 MPU 使能
+    rtos_region: "0x80000000-0xBFFFFFFF"
+    linux_region: "0x00000000-0x7FFFFFFF"
+
+# ── 启动流程 ──
+boot_sequence:
+  order:
+    - step: 1
+      action: "Linux kernel boots on cores 0-3"
+      details: "U-Boot loads kernel with isolcpus=4-7"
+    - step: 2
+      action: "CPU frequency locked to performance for big cluster"
+      details: "Linux sets governor before RTOS boot"
+    - step: 3
+      action: "RTOS image loaded to shared memory"
+      details: "remoteproc or direct mem load"
+    - step: 4
+      action: "Big cores released to RTOS"
+      details: "core 4-7 execute RTOS entry point"
+    - step: 5
+      action: "RPMsg channels established"
+      details: "Linux and RTOS handshake via channel 0"
+    - step: 6
+      action: "Application control tasks started"
+      details: "RTOS tasks pinned to specific cores"
+
+# ── 监控与诊断 ──
+monitoring:
+  metrics:
+    - name: "rtos_heartbeat"
+      source: "rpmsg-amp-ch0"
+      period_ms: 500
+    - name: "ipc_throughput"
+      source: "rpmsg_stats"
+      period_ms: 1000
+    - name: "rtos_stack_usage"
+      source: "rpmsg-amp-ch3"
+      period_ms: 5000
+  
+  alerts:
+    - condition: "heartbeat_timeout > 500ms"
+      action: "log_and_restart_rtos"
+    - condition: "rtos_core_freq < 2000MHz"
+      action: "warn_freq_drop"
+
+# ── 示例：快速配置预设 ──
+presets:
+  # 预设1: 工业控制（高实时性）
+  industrial_control:
+    rtos_cores: "6-7"            # 只用 2 个大核跑 RTOS
+    linux_cores: "0-5"           # 6 个核跑 Linux
+    rtos: "bare_metal"
+    cycle_time_us: 50            # 50us 控制周期
+    devices_rtos: ["can0", "uart4", "pwm0", "adc0"]
+    description: "高实时工业控制：2 核裸机 + 6 核 Linux 管理"
+  
+  # 预设2: 机器人（平衡模式）
+  robotics:
+    rtos_cores: "4-6"            # 3 个大核跑 RTOS
+    linux_cores: "0-3,7"         # 5 核跑 Linux
+    rtos: "Zephyr"
+    cycle_time_us: 100
+    devices_rtos: ["can0", "can1", "uart4", "pwm0", "pwm1"]
+    description: "机器人控制：3 核 RTOS + 5 核 Linux 感知/规划"
+  
+  # 预设3: 视觉推理（最大化 NPU）
+  ai_inference:
+    rtos_cores: "7"              # 1 核跑轻量控制
+    linux_cores: "0-6"           # 7 核跑 Linux + NPU 推理
+    rtos: "bare_metal"
+    cycle_time_us: 500
+    devices_rtos: ["can0", "uart4"]
+    description: "AI 视觉推理：1 核实时控制 + 7 核 Linux NPU 推理"
+  
+  # 预设4: 全 Linux SMP（无 RTOS）
+  full_smp:
+    rtos_cores: ""
+    linux_cores: "0-7"
+    rtos: "none"
+    description: "标准 SMP 模式：全部 8 核运行 Linux"

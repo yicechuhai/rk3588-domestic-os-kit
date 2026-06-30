@@ -1,0 +1,272 @@
+﻿# =============================================================================
+# RK3588 Domestic OS Compatibility Matrix
+# =============================================================================
+# 定义各国产操作系统在 RK3588 上的兼容性要求和状态
+# 用于驱动兼容层和 NeoCertify 认证的自动检测参考
+# =============================================================================
+
+matrix_version: "2.0"
+generated: "2026-06-30"
+chip: "RK3588"
+arch: "aarch64"
+
+# ── 操作系统定义 ──
+operating_systems:
+  kylinos_v10:
+    name: "KylinOS Embedded V10"
+    vendor: "KylinSoft"
+    type: "embedded"
+    kernel_base: "5.10 / 6.1"
+    libc: "glibc 2.31+"
+    init_system: "systemd"
+    package_manager: "apt / dpkg"
+    markers:
+      - "/etc/kylin-release"
+      - "/etc/.kyinfo"
+      - "/usr/share/kylin/"
+    required_kernel_modules:
+      - "rockchip_npu"
+      - "rockchip_canfd"
+      - "rknpu"
+    compliance:
+      neocertify: "2.0"
+      security_level: "C2"
+      crypto_standard: "SM2/SM3/SM4"
+
+  uos_v20:
+    name: "UnionTech UOS V20"
+    vendor: "UnionTech"
+    type: "desktop/server"
+    kernel_base: "5.10 / 6.1"
+    libc: "glibc 2.31+"
+    init_system: "systemd"
+    package_manager: "apt / dpkg"
+    markers:
+      - "/etc/uos-release"
+      - "/etc/deepin-version"
+      - "/usr/share/uos/"
+    required_kernel_modules:
+      - "rockchip_npu"
+      - "rockchip_canfd"
+      - "rknpu"
+    compliance:
+      neocertify: "2.0"
+      security_level: "C2"
+      crypto_standard: "SM2/SM3/SM4"
+
+  deepin_v23:
+    name: "Deepin V23"
+    vendor: "Deepin Technology"
+    type: "desktop"
+    kernel_base: "6.1 / 6.6"
+    libc: "glibc 2.35+"
+    init_system: "systemd"
+    package_manager: "apt / dpkg / linglong"
+    markers:
+      - "/etc/deepin-version"
+      - "/etc/deepin-release"
+      - "/usr/share/deepin/"
+    required_kernel_modules:
+      - "rockchip_npu"
+      - "rockchip_canfd"
+      - "rknpu"
+    compliance:
+      neocertify: "2.0"
+      security_level: "C2"
+      crypto_standard: "SM2/SM3/SM4"
+    extra_features:
+      - "Linglong containers"
+      - "DDE Next"
+
+  openkylin_v2:
+    name: "OpenKylin V2.0"
+    vendor: "OpenKylin Community"
+    type: "desktop"
+    kernel_base: "6.1 / 6.6"
+    libc: "glibc 2.35+"
+    init_system: "systemd"
+    package_manager: "apt / dpkg"
+    markers:
+      - "/etc/openkylin-release"
+      - "/usr/share/openkylin/"
+    required_kernel_modules:
+      - "rockchip_npu"
+      - "rockchip_canfd"
+    compliance:
+      neocertify: "2.0"
+      security_level: "C2"
+
+# ── 外设兼容性矩阵 ──
+peripheral_compatibility:
+  # 格式: peripheral: { os_name: compatibility_level }
+  # compatibility_level: full | partial | dtb_required | unsupported
+  npu:
+    description: "RK3588 NPU (6 TOPS)"
+    kylinos_v10: "full"
+    uos_v20: "full"
+    deepin_v23: "full"
+    openkylin_v2: "full"
+    note: "需要 rockchip_npu 内核模块"
+
+  gpu_mali_g610:
+    description: "ARM Mali-G610 MP4 GPU"
+    kylinos_v10: "full"
+    uos_v20: "full"
+    deepin_v23: "full"
+    openkylin_v2: "full"
+    note: "需要 panfrost/mali 驱动"
+
+  vpu:
+    description: "RK3588 8K Video Codec"
+    kylinos_v10: "full"
+    uos_v20: "full"
+    deepin_v23: "full"
+    openkylin_v2: "full"
+    note: "需要 rockchip_mpp 库"
+
+  can_fd:
+    description: "CAN FD (dual channel)"
+    kylinos_v10: "full"
+    uos_v20: "full"
+    deepin_v23: "full"
+    openkylin_v2: "dtb_required"
+    note: "需要 DTS 中启用 can0/can1 节点"
+
+  rs485:
+    description: "RS485 isolated"
+    kylinos_v10: "dtb_required"
+    uos_v20: "dtb_required"
+    deepin_v23: "dtb_required"
+    openkylin_v2: "dtb_required"
+    note: "需要 DTS 中配置 rs485-rts-delay"
+
+  gpio:
+    description: "GPIO (5 banks)"
+    kylinos_v10: "full"
+    uos_v20: "full"
+    deepin_v23: "full"
+    openkylin_v2: "full"
+
+  spi:
+    description: "SPI (multiple channels)"
+    kylinos_v10: "full"
+    uos_v20: "full"
+    deepin_v23: "full"
+    openkylin_v2: "full"
+
+  i2c:
+    description: "I2C (multiple buses)"
+    kylinos_v10: "full"
+    uos_v20: "full"
+    deepin_v23: "full"
+    openkylin_v2: "full"
+
+  uart:
+    description: "UART (multiple ports)"
+    kylinos_v10: "full"
+    uos_v20: "full"
+    deepin_v23: "full"
+    openkylin_v2: "full"
+
+  pcie:
+    description: "PCIe 3.0 x4"
+    kylinos_v10: "full"
+    uos_v20: "full"
+    deepin_v23: "full"
+    openkylin_v2: "full"
+
+  ethernet:
+    description: "Dual Gigabit Ethernet"
+    kylinos_v10: "full"
+    uos_v20: "full"
+    deepin_v23: "full"
+    openkylin_v2: "full"
+
+  usb3:
+    description: "USB 3.0/3.1"
+    kylinos_v10: "full"
+    uos_v20: "full"
+    deepin_v23: "full"
+    openkylin_v2: "full"
+
+  hdmi_dp:
+    description: "HDMI 2.1 + DisplayPort"
+    kylinos_v10: "full"
+    uos_v20: "full"
+    deepin_v23: "full"
+    openkylin_v2: "full"
+
+# ── AMP 调度兼容性 ──
+amp_compatibility:
+  kylinos_v10:
+    isolcpus_support: true
+    rt_kernel_available: true
+    rpmsg_support: true
+    note: "KylinOS 内核原生支持 isolcpus"
+  uos_v20:
+    isolcpus_support: true
+    rt_kernel_available: true
+    rpmsg_support: true
+    note: "UOS 内核支持 isolcpus 和 PREEMPT_RT 补丁"
+  deepin_v23:
+    isolcpus_support: true
+    rt_kernel_available: true
+    rpmsg_support: true
+    note: "Deepin 6.1+ 内核完整支持"
+  openkylin_v2:
+    isolcpus_support: true
+    rt_kernel_available: "partial"
+    rpmsg_support: true
+    note: "PREEMPT_RT 补丁需单独安装"
+
+# ── 安全合规兼容性 ──
+security_compatibility:
+  selinux:
+    kylinos_v10: "enforcing"
+    uos_v20: "enforcing"
+    deepin_v23: "permissive"
+    openkylin_v2: "permissive"
+  seccomp:
+    kylinos_v10: "enabled"
+    uos_v20: "enabled"
+    deepin_v23: "enabled"
+    openkylin_v2: "enabled"
+  apparmor:
+    kylinos_v10: "enabled"
+    uos_v20: "disabled"
+    deepin_v23: "disabled"
+    openkylin_v2: "disabled"
+  domestic_crypto:
+    kylinos_v10: "SM2/SM3/SM4"
+    uos_v20: "SM2/SM3/SM4"
+    deepin_v23: "SM2/SM3/SM4"
+    openkylin_v2: "SM3/SM4"
+
+# ── NeoCertify 认证等级 ──
+neocertify_levels:
+  level_1:
+    name: "基础兼容"
+    score_threshold: 60
+    requirements:
+      - "内核 5.10+"
+      - "glibc 2.31+"
+      - "systemd 启动"
+      - "基本外设可用 (UART/GPIO/I2C)"
+  level_2:
+    name: "完整兼容"
+    score_threshold: 80
+    requirements:
+      - "所有 Level 1 要求"
+      - "NPU 驱动正常"
+      - "CAN FD 可用"
+      - "SELinux enforcing"
+      - "Seccomp enabled"
+  level_3:
+    name: "深度适配"
+    score_threshold: 95
+    requirements:
+      - "所有 Level 2 要求"
+      - "PREEMPT_RT 内核"
+      - "AMP 混合调度"
+      - "国密算法支持"
+      - "NeoCertify 全项通过"
